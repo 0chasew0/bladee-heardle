@@ -1,4 +1,4 @@
-# Bladee Heardle
+# [Bladee Heardle](https://bladeeheardle.com/)
 
 Can also be used to create your own Heardle(s).
 
