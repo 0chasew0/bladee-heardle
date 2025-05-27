@@ -1,4 +1,6 @@
-# Heardle Template
+# Bladee Heardle
+
+Can also be used to create your own Heardle(s).
 
 Forked from [Shizerq](https://github.com/Shizerq/sluchajfun) 
 Clone of famous [Heardle](https://heardle.app) - "that daily music game". <br />
