@@ -1,7 +1,6 @@
-import { initialize } from "react-ga";
+import ReactGA from "react-ga4";
 
-const TRACKING_ID = "INSERT-YOUR-ID-HERE";
-initialize(TRACKING_ID);
+ReactGA.initialize("G-XEHERXLTHN");
 
 import React from "react";
 import ReactDOM from "react-dom";

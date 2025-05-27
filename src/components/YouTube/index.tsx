@@ -11,8 +11,8 @@ export function YouTube({ id }: Props) {
       <YouTubePlayer
         videoId={id}
         opts={{
-          width: "336",
-          height: "189",
+          width: "672",
+          height: "378",
           playerVars: {
             autoplay: 1,
             playsinline: 1,

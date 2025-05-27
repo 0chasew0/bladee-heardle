@@ -156,7 +156,7 @@ function App() {
           guess={guess}
         />
       </Styled.Container>
-      {/* <Footer /> */}
+      { <Footer />}
     </main>
   );
 }

@@ -18,7 +18,7 @@ export function Header({ openInfoPopUp }: Props) {
           height={30}
         />
 
-        <Styled.Logo>Heardle Template</Styled.Logo>
+        <Styled.Logo>Bladee Heardle</Styled.Logo>
         <a href="#"></a>
       </Styled.Content>
     </Styled.Container>
