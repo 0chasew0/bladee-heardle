@@ -13,6 +13,7 @@ export function YouTube({ id }: Props) {
         opts={{
           width: "672",
           height: "378",
+          host: "https://www.youtube-nocookie.com",
           playerVars: {
             autoplay: 1,
             playsinline: 1,

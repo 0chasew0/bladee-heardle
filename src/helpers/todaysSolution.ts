@@ -5,7 +5,7 @@ import { songs } from "../constants";
 // const index = Math.floor((now - epochMs) / msInDay);
 
 const msInDay = 86400000;
-const startDate = new Date('5/27/2025');
+const startDate = new Date('2/27/2026');
 const todaysDate = new Date();
 const index = Math.floor((todaysDate.getTime() - startDate.getTime() )/msInDay)
 
