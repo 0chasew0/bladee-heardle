@@ -1,5 +1,5 @@
 # Deploys to Firebase Hosting on every push to master (including merged heal PRs).
-# Setup (once): `firebase init hosting:github` creates the FIREBASE_SERVICE_ACCOUNT secret.
+# Setup (once): `firebase init hosting:github` creates the FIREBASE_SERVICE_ACCOUNT_BLADEE_HEARDLE secret.
 name: Deploy
 
 on:
@@ -9,6 +9,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Lint warnings shouldn't block a deploy. Job-wide because firebase.json's
+      # predeploy hook runs the build a second time inside the deploy step.
+      CI: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,11 +21,9 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npm run build
-        env:
-          CI: false # lint warnings shouldn't block a deploy
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BLADEE_HEARDLE }}
           channelId: live
           projectId: bladee-heardle
