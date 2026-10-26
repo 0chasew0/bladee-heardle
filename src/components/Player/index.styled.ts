@@ -46,3 +46,32 @@ export const TimeStamps = styled.div`
 export const TimeStamp = styled.p`
   color: ${({ theme }) => theme.text};
 `;
+
+export const PlayButton = styled.button`
+  display: flex;
+  padding: 0;
+
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.green};
+    outline-offset: 4px;
+  }
+`;
+
+export const Error = styled.p`
+  color: ${({ theme }) => theme.text};
+  text-align: center;
+
+  padding: 10px 14px;
+  border: 1px solid ${({ theme }) => theme.red};
+  border-radius: 4px;
+`;

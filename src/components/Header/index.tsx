@@ -14,12 +14,17 @@ export function Header({ openInfoPopUp }: Props) {
         <IoInformationCircleOutline
           onClick={openInfoPopUp}
           size={30}
-          width={30}
-          height={30}
+          role="button"
+          aria-label="How to play"
+          tabIndex={0}
+          style={{ cursor: "pointer" }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") openInfoPopUp();
+          }}
         />
 
         <Styled.Logo>Bladee Heardle</Styled.Logo>
-        <a href="#"></a>
+        <span />
       </Styled.Content>
     </Styled.Container>
   );

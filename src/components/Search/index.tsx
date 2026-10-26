@@ -1,5 +1,5 @@
 import React from "react";
-import { event } from "react-ga";
+import ReactGA from "react-ga4";
 import { IoSearch } from "react-icons/io5";
 import { searchSong } from "../../helpers";
 import { Song } from "../../types/song";
@@ -39,7 +39,7 @@ export function Search({ currentTry, setSelectedSong }: Props) {
               setValue(`${song.artist} - ${song.name}`);
               setResults([]);
 
-              event({
+              ReactGA.event({
                 category: "Player",
                 action: "Chose song",
                 label: `${song.artist} - ${song.name}`,

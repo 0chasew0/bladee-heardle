@@ -1,0 +1,108 @@
+<!doctype html>
+<!--
+  Ground-truth check: loads every song in the real YouTube embed player (muted)
+  and records whether it actually starts playing in *this* browser and region.
+
+  From the project root:  npx serve -l 5055 .
+  Then open:              http://localhost:5055/scripts/verify-embeds.html
+  Add ?only=broken to recheck just the failures from the last run in this browser.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Embed check</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; background: #00171f; color: #fff; margin: 16px; }
+      table { border-collapse: collapse; width: 100%; }
+      td, th { padding: 4px 8px; border-bottom: 1px solid #234; text-align: left; }
+      .ok { color: #4dbb60; } .bad { color: #ff6b6b; } .wait { color: #aaa; }
+      /* Must be on screen: Chrome pauses muted autoplay in off-screen frames. */
+      #players { position: fixed; right: 8px; bottom: 8px; display: flex; gap: 4px; }
+      #players iframe { width: 160px; height: 90px; }
+    </style>
+  </head>
+  <body>
+    <h1>Embed check <span id="summary"></span></h1>
+    <!-- A click is needed: without user activation Chrome may refuse autoplay and everything times out. -->
+    <button id="start" disabled>Start</button>
+    <table><thead><tr><th>#</th><th>Song</th><th>Video</th><th>Result</th></tr></thead><tbody id="rows"></tbody></table>
+    <div id="players"></div>
+    <script>
+      // Keep this tab in front: background tabs block autoplay and everything times out.
+      // ?c=1 checks one video at a time (slower, fewer false timeouts).
+      const CONCURRENCY = Number(new URLSearchParams(location.search).get("c")) || 4;
+      const TIMEOUT_MS = 15000;
+      const ERRORS = { 2: "bad id", 5: "html5 error", 100: "removed/private", 101: "embed blocked", 150: "embed blocked" };
+
+      function test(id) {
+        return new Promise((resolve) => {
+          const el = document.createElement("div");
+          document.getElementById("players").appendChild(el);
+          let done = false;
+          const finish = (r) => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            try { player.destroy(); } catch (_) {}
+            el.remove();
+            resolve(r);
+          };
+          const timer = setTimeout(() => finish({ ok: false, why: "timeout" }), TIMEOUT_MS);
+          const player = new YT.Player(el, {
+            host: "https://www.youtube-nocookie.com",
+            videoId: id,
+            playerVars: { autoplay: 1, mute: 1, playsinline: 1 },
+            events: {
+              onReady: (e) => { e.target.mute(); e.target.playVideo(); },
+              onStateChange: (e) => { if (e.data === 1) finish({ ok: true, why: "plays" }); },
+              onError: (e) => finish({ ok: false, why: `error ${e.data} (${ERRORS[e.data] || "?"})` }),
+            },
+          });
+        });
+      }
+
+      async function run() {
+        const songs = await (await fetch("../src/constants/songs.json")).json();
+        const prev = JSON.parse(localStorage.getItem("embedResults") || "{}");
+        const onlyBroken = new URLSearchParams(location.search).get("only") === "broken";
+
+        const jobs = [];
+        songs.forEach((s, i) => {
+          for (const id of [s.youtubeId, ...(s.fallbackIds || [])]) {
+            if (onlyBroken && prev[id]?.ok) continue;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${i}</td><td>${s.artist} - ${s.name}</td>` +
+              `<td><a href="https://youtu.be/${id}" target="_blank">${id}</a>${id === s.youtubeId ? "" : " (fallback)"}</td>` +
+              `<td class="wait">…</td>`;
+            document.getElementById("rows").appendChild(tr);
+            jobs.push({ id, cell: tr.lastChild });
+          }
+        });
+
+        const results = { ...prev };
+        let next = 0;
+        await Promise.all(Array.from({ length: CONCURRENCY }, async () => {
+          while (next < jobs.length) {
+            const job = jobs[next++];
+            const r = await test(job.id);
+            results[job.id] = r;
+            job.cell.className = r.ok ? "ok" : "bad";
+            job.cell.textContent = r.why;
+            const bad = Object.values(results).filter((x) => !x.ok).length;
+            document.getElementById("summary").textContent = `— ${next}/${jobs.length} checked, ${bad} failing`;
+          }
+        }));
+        localStorage.setItem("embedResults", JSON.stringify(results));
+        window.embedResults = results;
+        window.embedDone = true;
+      }
+
+      window.onYouTubeIframeAPIReady = () => {
+        const btn = document.getElementById("start");
+        btn.disabled = false;
+        btn.onclick = () => { btn.remove(); run(); };
+      };
+    </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+  </body>
+</html>

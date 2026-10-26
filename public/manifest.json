@@ -1,6 +1,6 @@
 {
-  "short_name": "bladeeHeardle",
-  "name": "bladeeHeardle",
+  "short_name": "Bladee Heardle",
+  "name": "Bladee Heardle",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#ffffff",
+  "theme_color": "#00171F",
   "background_color": "#00171F"
 }

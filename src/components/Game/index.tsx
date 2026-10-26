@@ -10,8 +10,9 @@ import * as Styled from "./index.styled";
 
 interface Props {
   guesses: GuessType[];
-  todaysSolution: any;
+  todaysSolution: Song;
   currentTry: number;
+  maxTries: number;
   didGuess: boolean;
   setSelectedSong: React.Dispatch<React.SetStateAction<Song | undefined>>;
   skip: () => void;
@@ -22,17 +23,26 @@ export function Game({
   guesses,
   todaysSolution,
   currentTry,
+  maxTries,
   didGuess,
   setSelectedSong,
   skip,
   guess,
 }: Props) {
-  if (didGuess || currentTry === 6) {
+  // Whichever upload actually played, so the result video doesn't hit the same dead id.
+  const [resolvedId, setResolvedId] = React.useState(todaysSolution.youtubeId);
+
+  if (didGuess || currentTry >= maxTries) {
     return (
       <Result
         didGuess={didGuess}
         currentTry={currentTry}
         todaysSolution={todaysSolution}
+        videoIds={[
+          resolvedId,
+          todaysSolution.youtubeId,
+          ...(todaysSolution.fallbackIds || []),
+        ]}
         guesses={guesses}
       />
     );
@@ -47,14 +57,20 @@ export function Game({
           active={index === currentTry}
         />
       ))}
-      <Player id={todaysSolution.youtubeId} currentTry={currentTry} />
+      <Player
+        id={todaysSolution.youtubeId}
+        fallbackIds={todaysSolution.fallbackIds}
+        songLabel={`${todaysSolution.artist} - ${todaysSolution.name}`}
+        currentTry={currentTry}
+        onResolvedId={setResolvedId}
+      />
       <Search currentTry={currentTry} setSelectedSong={setSelectedSong} />
 
       <Styled.Buttons>
         <Button onClick={skip}>
-          {currentTry === 5
+          {currentTry === maxTries - 1
             ? "Give Up"
-            : `Skip +${playTimes[currentTry] / 1000}s`}
+            : `Skip +${(playTimes[currentTry + 1] - playTimes[currentTry]) / 1000}s`}
         </Button>
         <Button variant="green" onClick={guess}>
           Submit

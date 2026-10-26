@@ -1,91 +1,104 @@
-import { event } from "react-ga";
+import ReactGA from "react-ga4";
 
 import React from "react";
-import _ from "lodash";
 
 import { Song } from "./types/song";
 import { GuessType } from "./types/guess";
 
-import { todaysSolution } from "./helpers";
+import { todaysSolution, dayIndex } from "./helpers";
+import { playTimes } from "./constants";
 
 import { Header, InfoPopUp, Game, Footer } from "./components";
 
 import * as Styled from "./app.styled";
 
-function App() {
-  const initialGuess = {
-    song: undefined,
-    skipped: false,
-    isCorrect: undefined,
-  } as GuessType;
+const MAX_TRIES = playTimes.length;
 
-  const [guesses, setGuesses] = React.useState<GuessType[]>(
-    Array.from({ length: 5 }).fill(initialGuess) as GuessType[]
+const emptyGuess: GuessType = {
+  song: undefined,
+  skipped: false,
+  isCorrect: undefined,
+};
+
+interface DayStats {
+  day?: number;
+  solution: Song;
+  currentTry: number;
+  didGuess: boolean;
+  guesses?: GuessType[];
+}
+
+function loadStats(): DayStats[] {
+  try {
+    const stats = JSON.parse(localStorage.getItem("stats") || "[]");
+    return Array.isArray(stats) ? stats : [];
+  } catch {
+    return [];
+  }
+}
+
+// Match on the day, not the song object: the checker swaps youtubeIds, and a
+// deep-equal on the song would wipe a player's in-progress game for that day.
+function isToday(entry: DayStats | undefined): boolean {
+  if (!entry) return false;
+  if (entry.day !== undefined) return entry.day === dayIndex;
+  return (
+    entry.solution?.name === todaysSolution.name &&
+    entry.solution?.artist === todaysSolution.artist
   );
-  const [currentTry, setCurrentTry] = React.useState<number>(0);
-  const [selectedSong, setSelectedSong] = React.useState<Song>();
-  const [didGuess, setDidGuess] = React.useState<boolean>(false);
+}
 
-  const firstRun = localStorage.getItem("firstRun") === null;
-  let stats = JSON.parse(localStorage.getItem("stats") || "{}");
+function padGuesses(guesses: GuessType[] | undefined): GuessType[] {
+  const out = [...(guesses || [])];
+  while (out.length < MAX_TRIES) out.push(emptyGuess);
+  return out;
+}
 
-  React.useEffect(() => {
-    if (Array.isArray(stats)) {
-      const visitedToday = _.isEqual(
-        todaysSolution,
-        stats[stats.length - 1].solution
-      );
-
-      if (!visitedToday) {
-        stats.push({
-          solution: todaysSolution,
-          currentTry: 0,
-          didGuess: 0,
-        });
-      } else {
-        const { currentTry, guesses, didGuess } = stats[stats.length - 1];
-        setCurrentTry(currentTry);
-        setGuesses(guesses);
-        setDidGuess(didGuess);
-      }
-    } else {
-      // initialize stats
-      // useEffect below does rest
-      stats = [];
-      stats.push({
+function App() {
+  const [stats] = React.useState<DayStats[]>(() => {
+    const loaded = loadStats();
+    if (!isToday(loaded[loaded.length - 1])) {
+      loaded.push({
+        day: dayIndex,
         solution: todaysSolution,
+        currentTry: 0,
+        didGuess: false,
       });
     }
-  }, []);
+    return loaded;
+  });
+  const today = stats[stats.length - 1];
+
+  const [guesses, setGuesses] = React.useState<GuessType[]>(() =>
+    padGuesses(today.guesses)
+  );
+  const [currentTry, setCurrentTry] = React.useState<number>(
+    today.currentTry || 0
+  );
+  const [selectedSong, setSelectedSong] = React.useState<Song>();
+  const [didGuess, setDidGuess] = React.useState<boolean>(!!today.didGuess);
 
   React.useEffect(() => {
-    if (Array.isArray(stats)) {
-      stats[stats.length - 1].currentTry = currentTry;
-      stats[stats.length - 1].didGuess = didGuess;
-      stats[stats.length - 1].guesses = guesses;
+    Object.assign(today, { day: dayIndex, currentTry, didGuess, guesses });
+    try {
+      localStorage.setItem("stats", JSON.stringify(stats));
+    } catch {
+      // Private mode / storage full: the game still works, it just won't resume.
     }
-  }),
-    [guesses, currentTry, didGuess];
+  }, [guesses, currentTry, didGuess]);
 
-  React.useEffect(() => {
-    localStorage.setItem("stats", JSON.stringify(stats));
-  }, [stats]);
-
-  const [isInfoPopUpOpen, setIsInfoPopUpOpen] =
-    React.useState<boolean>(firstRun);
+  const [isInfoPopUpOpen, setIsInfoPopUpOpen] = React.useState<boolean>(
+    () => localStorage.getItem("firstRun") === null
+  );
 
   const openInfoPopUp = React.useCallback(() => {
     setIsInfoPopUpOpen(true);
   }, []);
 
   const closeInfoPopUp = React.useCallback(() => {
-    if (firstRun) {
-      localStorage.setItem("firstRun", "false");
-      setIsInfoPopUpOpen(false);
-    } else {
-      setIsInfoPopUpOpen(false);
-    }
-  }, [localStorage.getItem("firstRun")]);
+    localStorage.setItem("firstRun", "false");
+    setIsInfoPopUpOpen(false);
+  }, []);
 
   const skip = React.useCallback(() => {
     setGuesses((guesses: GuessType[]) => {
@@ -101,19 +114,21 @@ function App() {
 
     setCurrentTry((currentTry) => currentTry + 1);
 
-    event({
+    ReactGA.event({
       category: "Game",
       action: "Skip",
     });
   }, [currentTry]);
 
   const guess = React.useCallback(() => {
-    const isCorrect = selectedSong === todaysSolution;
-
     if (!selectedSong) {
       alert("Choose a song");
       return;
     }
+
+    const isCorrect =
+      selectedSong.name === todaysSolution.name &&
+      selectedSong.artist === todaysSolution.artist;
 
     setGuesses((guesses: GuessType[]) => {
       const newGuesses = [...guesses];
@@ -133,13 +148,13 @@ function App() {
       setDidGuess(true);
     }
 
-    event({
+    ReactGA.event({
       category: "Game",
       action: "Guess",
       label: `${selectedSong.artist} - ${selectedSong.name}`,
       value: isCorrect ? 1 : 0,
     });
-  }, [guesses, selectedSong]);
+  }, [currentTry, selectedSong]);
 
   return (
     <main>
@@ -151,12 +166,13 @@ function App() {
           didGuess={didGuess}
           todaysSolution={todaysSolution}
           currentTry={currentTry}
+          maxTries={MAX_TRIES}
           setSelectedSong={setSelectedSong}
           skip={skip}
           guess={guess}
         />
       </Styled.Container>
-      { <Footer />}
+      <Footer />
     </main>
   );
 }

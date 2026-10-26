@@ -1,18 +1,14 @@
 import { GuessType } from "../types/guess";
+import { puzzleNumber } from "./todaysSolution";
 
 export function scoreToEmoji(guesses: GuessType[]): string {
-  const msInDay = 86400000;
-  const startDate = new Date('5/27/2025');
-  const todaysDate = new Date();
-  const index = Math.floor((todaysDate.getTime() - startDate.getTime() )/msInDay) + 1 
   const emojis = {
     incorrect: "🟥",
     correct: "🟩",
     skip: "⬜",
     empty: "⬛️",
   };
-  // const todaysDate = new Date();
-  const prefix = `Bladee Heardle - #${index} 🎧`;
+  const prefix = `Bladee Heardle - #${puzzleNumber} 🎧`;
 
   let scoreEmoji = "";
 
@@ -28,5 +24,6 @@ export function scoreToEmoji(guesses: GuessType[]): string {
     }
   });
 
-  return `${prefix} ${scoreEmoji}`;
+  // The link is what turns a pasted score into a new player.
+  return `${prefix} ${scoreEmoji}\n${window.location.origin}`;
 }

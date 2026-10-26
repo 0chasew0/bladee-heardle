@@ -1,0 +1,56 @@
+# Weekly: find songs whose YouTube video died, swap in a working upload, and
+# open a PR with the changes (song-report.md explains each swap).
+#
+# Setup (once): repo Settings → Secrets and variables → Actions →
+#   YOUTUBE_API_KEY  (Google Cloud console → enable "YouTube Data API v3" → API key)
+name: Check songs
+
+on:
+  schedule:
+    - cron: "17 9 * * 1" # Mondays 09:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check and heal
+        id: check
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          set +e
+          node scripts/check-songs.mjs --fix --fill-fallbacks
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR with healed songs
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/heal-songs
+          commit-message: "fix: heal dead song videos"
+          title: "fix: heal dead song videos"
+          body-path: song-report.md
+          add-paths: src/constants/songs.json
+
+      - name: Flag songs that need a human
+        if: steps.check.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --label broken-songs --state open --json number -q '.[0].number' > n.txt
+          if [ -s n.txt ]; then
+            gh issue comment "$(cat n.txt)" --body-file song-report.md
+          else
+            gh label create broken-songs --color B60205 --force
+            gh issue create --title "Songs with no working video" --label broken-songs --body-file song-report.md
+          fi
